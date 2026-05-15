@@ -929,10 +929,8 @@ let supabase = null;
 let configValid = false;
 
 try {
-  {
-    supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
-    configValid = true;
-  }
+  supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+  configValid = true;
 } catch(e) {
   console.warn('Supabase init error:', e);
 }
