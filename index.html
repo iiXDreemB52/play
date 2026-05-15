@@ -1,0 +1,1519 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>العب مع اكس دريم بـ اللايف</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=Orbitron:wght@700;900&display=swap" rel="stylesheet" />
+<style>
+  /* ===== CSS VARIABLES ===== */
+  :root {
+    --bg-deep:    #050810;
+    --bg-dark:    #0b0f1e;
+    --bg-card:    #111628;
+    --bg-input:   #0d1122;
+    --border:     #1e2a4a;
+    --border-glow:#2a3f7a;
+    --primary:    #00d4ff;
+    --primary-dim:#0099bb;
+    --accent:     #7c3aed;
+    --accent2:    #a855f7;
+    --gold:       #f59e0b;
+    --gold-light: #fcd34d;
+    --success:    #10b981;
+    --danger:     #ef4444;
+    --text:       #e2e8f0;
+    --text-dim:   #8b98b8;
+    --text-muted: #4a5568;
+    --radius:     12px;
+    --radius-lg:  20px;
+    --shadow:     0 4px 32px rgba(0,0,0,0.6);
+    --glow-primary: 0 0 20px rgba(0,212,255,0.3);
+    --glow-accent:  0 0 20px rgba(124,58,237,0.4);
+  }
+
+  /* ===== RESET & BASE ===== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Tajawal', sans-serif;
+    background: var(--bg-deep);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated background grid */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+    animation: gridPan 20s linear infinite;
+    pointer-events: none; z-index: 0;
+  }
+  @keyframes gridPan {
+    0%   { transform: translate(0,0); }
+    100% { transform: translate(60px,60px); }
+  }
+
+  /* ===== UTILITY ===== */
+  .hidden { display: none !important; }
+  .flex { display: flex; }
+  .flex-col { flex-direction: column; }
+  .items-center { align-items: center; }
+  .justify-center { justify-content: center; }
+  .gap-2 { gap: 8px; }
+  .gap-3 { gap: 12px; }
+  .gap-4 { gap: 16px; }
+  .w-full { width: 100%; }
+  .text-center { text-align: center; }
+  .relative { position: relative; }
+
+  /* ===== COMMON COMPONENTS ===== */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 14px 28px;
+    border: none; border-radius: var(--radius);
+    font-family: 'Tajawal', sans-serif;
+    font-size: 16px; font-weight: 700;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    position: relative; overflow: hidden;
+    letter-spacing: 0.3px;
+  }
+  .btn::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: rgba(255,255,255,0);
+    transition: background 0.2s;
+  }
+  .btn:hover::after { background: rgba(255,255,255,0.07); }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dim));
+    color: #000;
+    box-shadow: var(--glow-primary);
+  }
+  .btn-primary:hover { box-shadow: 0 0 30px rgba(0,212,255,0.5); }
+
+  .btn-accent {
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    color: #fff;
+    box-shadow: var(--glow-accent);
+  }
+  .btn-accent:hover { box-shadow: 0 0 30px rgba(168,85,247,0.5); }
+
+  .btn-gold {
+    background: linear-gradient(135deg, var(--gold-light), var(--gold));
+    color: #000;
+    box-shadow: 0 0 20px rgba(245,158,11,0.3);
+  }
+  .btn-gold:hover { box-shadow: 0 0 30px rgba(245,158,11,0.5); }
+
+  .btn-danger {
+    background: linear-gradient(135deg, #f87171, var(--danger));
+    color: #fff;
+    box-shadow: 0 0 20px rgba(239,68,68,0.3);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+  }
+  .btn-ghost:hover { border-color: var(--primary); color: var(--primary); }
+
+  .btn-lg { padding: 18px 36px; font-size: 18px; border-radius: var(--radius-lg); }
+  .btn-sm { padding: 9px 18px; font-size: 14px; border-radius: 8px; }
+
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    box-shadow: var(--shadow);
+    position: relative; overflow: hidden;
+  }
+  .card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0,212,255,0.4), transparent);
+  }
+
+  .input-field {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    color: var(--text);
+    font-family: 'Tajawal', sans-serif;
+    font-size: 16px;
+    transition: all 0.2s;
+    outline: none;
+  }
+  .input-field:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0,212,255,0.1);
+  }
+  .input-field::placeholder { color: var(--text-muted); }
+
+  label { display: block; font-size: 14px; color: var(--text-dim); margin-bottom: 8px; font-weight: 500; }
+
+  /* ===== NOTIFICATION TOAST ===== */
+  #toast-container {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    z-index: 9999;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    pointer-events: none;
+  }
+  .toast {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 24px;
+    font-size: 14px; font-weight: 600;
+    box-shadow: var(--shadow);
+    animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+    pointer-events: auto;
+  }
+  .toast.success { border-color: var(--success); color: var(--success); }
+  .toast.error   { border-color: var(--danger);  color: var(--danger);  }
+  .toast.info    { border-color: var(--primary);  color: var(--primary); }
+  @keyframes toastIn  { from { opacity:0; transform:translateY(-10px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes toastOut { from { opacity:1; } to { opacity:0; } }
+
+  /* ===== LOADING SPINNER ===== */
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ===== PULSE DOT ===== */
+  .pulse-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 0 0 rgba(16,185,129,0.4);
+    animation: pulseAnim 2s infinite;
+    flex-shrink: 0;
+  }
+  @keyframes pulseAnim {
+    0%   { box-shadow: 0 0 0 0 rgba(16,185,129,0.4); }
+    70%  { box-shadow: 0 0 0 8px rgba(16,185,129,0); }
+    100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+  }
+
+  /* ==========================================
+     PAGE: PASSWORD / LOGIN
+  ========================================== */
+  #page-login {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+    background: var(--bg-deep);
+  }
+  .login-wrap {
+    width: 100%; max-width: 420px;
+    padding: 20px;
+    animation: fadeUp 0.6s ease;
+  }
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(30px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  .login-logo {
+    text-align: center; margin-bottom: 36px;
+  }
+  .login-logo .brand {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px; font-weight: 700;
+    color: var(--primary);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    display: block;
+  }
+  .login-logo h1 {
+    font-size: 26px; font-weight: 900;
+    line-height: 1.3;
+    background: linear-gradient(135deg, #fff 0%, var(--primary) 60%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .login-logo .subtitle {
+    font-size: 14px; color: var(--text-muted);
+    margin-top: 8px; display: block;
+  }
+  .lock-icon {
+    width: 72px; height: 72px;
+    background: linear-gradient(135deg, rgba(0,212,255,0.15), rgba(124,58,237,0.15));
+    border: 1px solid var(--border-glow);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+    margin: 0 auto 20px;
+    box-shadow: var(--glow-primary);
+  }
+  #login-error {
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.3);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    font-size: 14px; color: var(--danger);
+    text-align: center;
+    margin-top: 12px;
+  }
+
+  /* ==========================================
+     PAGE: DASHBOARD (ADMIN)
+  ========================================== */
+  #page-dashboard {
+    min-height: 100vh;
+    padding: 24px;
+    position: relative; z-index: 1;
+  }
+  .dash-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 32px;
+    flex-wrap: wrap; gap: 16px;
+  }
+  .dash-header .logo-text {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 11px; letter-spacing: 3px;
+    color: var(--primary); text-transform: uppercase;
+  }
+  .dash-header h2 {
+    font-size: 22px; font-weight: 800;
+    background: linear-gradient(90deg, #fff, var(--primary));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .dash-header .right { display: flex; gap: 12px; align-items: center; }
+  .live-badge {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(16,185,129,0.1);
+    border: 1px solid rgba(16,185,129,0.3);
+    border-radius: 100px; padding: 6px 14px;
+    font-size: 12px; color: var(--success); font-weight: 700;
+  }
+
+  /* Active parties grid */
+  .parties-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 24px;
+  }
+  .party-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+    transition: all 0.3s;
+    cursor: pointer;
+    position: relative; overflow: hidden;
+  }
+  .party-card:hover {
+    border-color: var(--primary);
+    box-shadow: var(--glow-primary);
+    transform: translateY(-2px);
+  }
+  .party-card::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(0,212,255,0.04), transparent);
+    pointer-events: none;
+  }
+  .party-card .party-id {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px; color: var(--text-muted);
+    letter-spacing: 2px; margin-bottom: 8px;
+  }
+  .party-card .party-code-preview {
+    font-size: 18px; font-weight: 800; color: var(--primary);
+    margin-bottom: 12px;
+  }
+  .party-card .party-meta {
+    display: flex; gap: 16px;
+    font-size: 13px; color: var(--text-dim);
+  }
+  .party-card .party-meta span { display: flex; align-items: center; gap: 4px; }
+  .party-actions { display: flex; gap: 8px; margin-top: 16px; }
+
+  /* ==========================================
+     MODAL: CREATE PARTY
+  ========================================== */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(6px);
+    z-index: 500;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.2s ease;
+  }
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+  .modal {
+    background: var(--bg-dark);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 36px;
+    width: 100%; max-width: 480px;
+    box-shadow: 0 8px 60px rgba(0,0,0,0.8);
+    animation: scaleIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    position: relative;
+  }
+  @keyframes scaleIn {
+    from { opacity:0; transform:scale(0.9); }
+    to   { opacity:1; transform:scale(1); }
+  }
+  .modal-title {
+    font-size: 22px; font-weight: 800;
+    margin-bottom: 24px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .modal-close {
+    position: absolute; top: 16px; left: 16px;
+    width: 36px; height: 36px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 16px; color: var(--text-dim);
+    transition: all 0.2s;
+  }
+  .modal-close:hover { border-color: var(--danger); color: var(--danger); }
+
+  /* Step indicator */
+  .step-indicator {
+    display: flex; align-items: center; gap: 0;
+    margin-bottom: 28px;
+  }
+  .step-dot {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+    border: 2px solid var(--border);
+    color: var(--text-muted);
+    transition: all 0.3s;
+    flex-shrink: 0;
+  }
+  .step-dot.active {
+    border-color: var(--primary); color: var(--primary);
+    box-shadow: 0 0 12px rgba(0,212,255,0.3);
+  }
+  .step-dot.done {
+    background: var(--primary); border-color: var(--primary);
+    color: #000;
+  }
+  .step-line {
+    flex: 1; height: 2px;
+    background: var(--border);
+    transition: background 0.3s;
+  }
+  .step-line.done { background: var(--primary); }
+
+  /* Share link box */
+  .share-box {
+    background: var(--bg-input);
+    border: 1px solid var(--border-glow);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    font-size: 13px; color: var(--primary);
+    word-break: break-all;
+    font-family: monospace;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .share-box:hover { border-color: var(--primary); }
+
+  /* ==========================================
+     PAGE: PARTY ROOM
+  ========================================== */
+  #page-party {
+    min-height: 100vh;
+    position: relative; z-index: 1;
+  }
+
+  /* Join screen */
+  #join-screen {
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .join-wrap {
+    width: 100%; max-width: 420px;
+    animation: fadeUp 0.5s ease;
+  }
+  .join-header {
+    text-align: center; margin-bottom: 32px;
+  }
+  .join-header .logo-tag {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px; letter-spacing: 3px;
+    color: var(--primary); text-transform: uppercase;
+    display: block; margin-bottom: 10px;
+  }
+  .join-header h2 {
+    font-size: 24px; font-weight: 900;
+    background: linear-gradient(135deg, #fff, var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 8px;
+  }
+  .join-header p { font-size: 14px; color: var(--text-muted); }
+
+  /* Party room layout */
+  #room-screen {
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* Main area */
+  .room-main {
+    flex: 1;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    padding: 20px 20px 20px 20px;
+    gap: 16px;
+  }
+
+  .room-header {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+  }
+  .room-header .left { display: flex; align-items: center; gap: 12px; }
+  .room-title-tag {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 10px; letter-spacing: 2px;
+    color: var(--primary); text-transform: uppercase;
+  }
+  .room-header h2 { font-size: 18px; font-weight: 800; }
+  .player-count-badge {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(0,212,255,0.08);
+    border: 1px solid rgba(0,212,255,0.2);
+    border-radius: 100px; padding: 5px 12px;
+    font-size: 13px; color: var(--primary); font-weight: 700;
+  }
+
+  /* Participants list */
+  .participants-section { flex: 1; overflow-y: auto; }
+  .section-label {
+    font-size: 12px; text-transform: uppercase;
+    letter-spacing: 2px; color: var(--text-muted);
+    margin-bottom: 12px; font-weight: 700;
+  }
+  .participants-grid {
+    display: flex; flex-wrap: wrap; gap: 8px;
+  }
+  .participant-chip {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 7px 14px;
+    font-size: 14px; font-weight: 600;
+    animation: chipIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    transition: all 0.3s;
+  }
+  .participant-chip.is-winner {
+    border-color: var(--gold);
+    background: rgba(245,158,11,0.1);
+    color: var(--gold);
+    box-shadow: 0 0 12px rgba(245,158,11,0.2);
+  }
+  .participant-chip .avatar {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent2), var(--primary));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 800; color: #fff;
+    flex-shrink: 0;
+  }
+  @keyframes chipIn {
+    from { opacity:0; transform:scale(0.7); }
+    to   { opacity:1; transform:scale(1); }
+  }
+
+  /* Draw result banner */
+  #draw-banner {
+    background: linear-gradient(135deg, rgba(245,158,11,0.15), rgba(252,211,77,0.05));
+    border: 1px solid rgba(245,158,11,0.3);
+    border-radius: var(--radius-lg);
+    padding: 20px 24px;
+    text-align: center;
+    animation: fadeUp 0.5s ease;
+  }
+  #draw-banner.winner-banner {
+    background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(52,211,153,0.05));
+    border-color: rgba(16,185,129,0.4);
+    box-shadow: 0 0 30px rgba(16,185,129,0.15);
+  }
+  #draw-banner h3 { font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+  #draw-banner .code-reveal {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 24px; font-weight: 900;
+    color: var(--gold);
+    background: rgba(245,158,11,0.1);
+    border: 1px solid rgba(245,158,11,0.3);
+    border-radius: var(--radius);
+    padding: 12px 20px;
+    display: inline-block; margin-top: 10px;
+    letter-spacing: 3px;
+    box-shadow: 0 0 20px rgba(245,158,11,0.2);
+    animation: codeGlow 2s infinite alternate;
+  }
+  @keyframes codeGlow {
+    from { box-shadow: 0 0 10px rgba(245,158,11,0.2); }
+    to   { box-shadow: 0 0 25px rgba(245,158,11,0.5); }
+  }
+
+  /* Admin draw controls */
+  #admin-controls {
+    display: flex; gap: 10px; flex-wrap: wrap;
+  }
+
+  /* ===== CHAT SIDEBAR ===== */
+  .chat-sidebar {
+    width: 300px;
+    min-width: 300px;
+    background: var(--bg-dark);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    height: 100vh;
+  }
+  .chat-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .chat-header h3 { font-size: 15px; font-weight: 700; }
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex; flex-direction: column; gap: 6px;
+  }
+  .chat-messages::-webkit-scrollbar { width: 4px; }
+  .chat-messages::-webkit-scrollbar-track { background: transparent; }
+  .chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  .chat-msg {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 13px;
+    animation: msgIn 0.3s ease;
+  }
+  .chat-msg.system-msg {
+    background: rgba(0,212,255,0.05);
+    border-color: rgba(0,212,255,0.15);
+    color: var(--text-muted); font-size: 12px; text-align: center;
+  }
+  @keyframes msgIn {
+    from { opacity:0; transform:translateX(10px); }
+    to   { opacity:1; transform:translateX(0); }
+  }
+  .chat-msg .msg-name {
+    font-size: 11px; color: var(--primary);
+    font-weight: 700; margin-bottom: 3px;
+  }
+  .chat-msg .msg-text { color: var(--text); word-break: break-word; }
+
+  .chat-input-area {
+    padding: 12px;
+    border-top: 1px solid var(--border);
+    display: flex; gap: 8px;
+  }
+  .chat-input-area input {
+    flex: 1;
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'Tajawal', sans-serif;
+    font-size: 14px; outline: none;
+    transition: border-color 0.2s;
+  }
+  .chat-input-area input:focus { border-color: var(--primary); }
+  .chat-input-area input::placeholder { color: var(--text-muted); }
+  .send-btn {
+    width: 40px; height: 40px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dim));
+    border: none; border-radius: var(--radius);
+    cursor: pointer; color: #000; font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; flex-shrink: 0;
+  }
+  .send-btn:hover { box-shadow: var(--glow-primary); transform: scale(1.05); }
+
+  /* Drawing animation */
+  .draw-animation {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 16px; padding: 24px;
+    text-align: center;
+  }
+  .spinning-wheel {
+    width: 80px; height: 80px;
+    border: 4px solid var(--border);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.5s linear infinite;
+  }
+
+  /* ===== EMPTY STATE ===== */
+  .empty-state {
+    text-align: center; padding: 48px 24px;
+    color: var(--text-muted);
+  }
+  .empty-state .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+  .empty-state p { font-size: 15px; }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 768px) {
+    #room-screen { flex-direction: column-reverse; }
+    .chat-sidebar {
+      width: 100%; min-width: 0;
+      height: 45vh; border-right: none;
+      border-top: 1px solid var(--border);
+    }
+    .room-main { height: 55vh; padding: 14px; overflow-y: auto; }
+    .dash-header h2 { font-size: 18px; }
+    .modal { padding: 24px; }
+    .parties-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 480px) {
+    .btn-lg { padding: 14px 24px; font-size: 16px; }
+    #admin-controls { flex-direction: column; }
+  }
+
+  /* Section fade-in */
+  .animate-in { animation: fadeUp 0.4s ease; }
+</style>
+</head>
+<body>
+
+<!-- ====== TOAST ====== -->
+<div id="toast-container"></div>
+
+<!-- ====== PAGE: LOGIN ====== -->
+<div id="page-login">
+  <div class="login-wrap">
+    <div class="login-logo">
+      <span class="brand">XDream Live</span>
+      <div class="lock-icon">🔐</div>
+      <h1>العب مع اكس دريم<br/>بـ اللايف</h1>
+      <span class="subtitle">لوحة التحكم الخاصة بالمشرف</span>
+    </div>
+    <div class="card">
+      <label for="pw-input">كلمة المرور</label>
+      <input type="password" id="pw-input" class="input-field" placeholder="أدخل كلمة المرور..." autocomplete="off" />
+      <div id="login-error" class="hidden">❌ كلمة المرور غير صحيحة</div>
+      <br/>
+      <button class="btn btn-primary w-full btn-lg" onclick="doLogin()">
+        🚀 دخول
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ====== PAGE: DASHBOARD ====== -->
+<div id="page-dashboard" class="hidden">
+  <div class="dash-header">
+    <div>
+      <div class="logo-text">XDream Live</div>
+      <h2>لوحة التحكم</h2>
+    </div>
+    <div class="right">
+      <div class="live-badge">
+        <div class="pulse-dot"></div>
+        مباشر
+      </div>
+      <button class="btn btn-primary" onclick="openCreateParty()">
+        ➕ إنشاء بارتي
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="logout()">خروج</button>
+    </div>
+  </div>
+
+  <div id="config-warning" class="card hidden" style="border-color:rgba(245,158,11,0.4);background:rgba(245,158,11,0.05);margin-bottom:20px;">
+    <div style="color:var(--gold);font-weight:700;font-size:15px;margin-bottom:8px;">⚠️ يحتاج إعداد Supabase</div>
+    <div style="color:var(--text-dim);font-size:14px;line-height:1.7;">
+      لتشغيل الموقع، عدّل المتغيرين في أعلى ملف <code style="color:var(--primary)">index.html</code>:<br/>
+      <code style="color:var(--primary)">SUPABASE_URL</code> و <code style="color:var(--primary)">SUPABASE_ANON_KEY</code>
+    </div>
+  </div>
+
+  <div id="dash-section-label" class="section-label">البارتيات النشطة</div>
+  <div id="parties-list" class="parties-grid">
+    <div class="empty-state">
+      <div class="icon">🎮</div>
+      <p>لا توجد بارتيات بعد<br/>اضغط "إنشاء بارتي" للبدء</p>
+    </div>
+  </div>
+</div>
+
+<!-- ====== MODAL: CREATE PARTY ====== -->
+<div id="modal-create" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-close" onclick="closeCreateParty()">✕</div>
+    <div class="modal-title">🎉 إنشاء بارتي جديد</div>
+
+    <!-- Step indicator -->
+    <div class="step-indicator">
+      <div class="step-dot active" id="step-dot-1">1</div>
+      <div class="step-line" id="step-line-1"></div>
+      <div class="step-dot" id="step-dot-2">2</div>
+      <div class="step-line" id="step-line-2"></div>
+      <div class="step-dot" id="step-dot-3">3</div>
+    </div>
+
+    <!-- Step 1 -->
+    <div id="create-step-1">
+      <div style="margin-bottom:20px;">
+        <label>كود الجائزة اللي بتوزعه على الفائزين</label>
+        <input type="text" id="inp-reveal-code" class="input-field" placeholder="مثال: XDREAM2024VIP" />
+      </div>
+      <div style="margin-bottom:24px;">
+        <label>عدد الفائزين بالسحب</label>
+        <input type="number" id="inp-winners-count" class="input-field" placeholder="مثال: 3" min="1" value="1" />
+      </div>
+      <button class="btn btn-primary w-full" onclick="createStep1Next()">التالي ←</button>
+    </div>
+
+    <!-- Step 2: confirm -->
+    <div id="create-step-2" class="hidden">
+      <div class="card" style="margin-bottom:20px;">
+        <div style="font-size:13px;color:var(--text-muted);margin-bottom:6px;">كود الجائزة</div>
+        <div id="confirm-code" style="font-size:18px;font-weight:800;color:var(--primary);"></div>
+        <div style="margin-top:12px;font-size:13px;color:var(--text-muted);">عدد الفائزين</div>
+        <div id="confirm-winners" style="font-size:16px;font-weight:700;"></div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost flex-1" onclick="createGoBack()">← رجوع</button>
+        <button class="btn btn-accent flex-1" onclick="doCreateParty()" id="btn-create-confirm">
+          ✨ إنشاء البارتي
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 3: share link -->
+    <div id="create-step-3" class="hidden">
+      <div style="text-align:center;margin-bottom:20px;">
+        <div style="font-size:40px;margin-bottom:8px;">🎊</div>
+        <div style="font-weight:800;font-size:18px;margin-bottom:4px;">تم إنشاء البارتي!</div>
+        <div style="font-size:14px;color:var(--text-muted);">شارك الرابط مع اللاعبين</div>
+      </div>
+      <label>رابط البارتي (انقر للنسخ)</label>
+      <div class="share-box" id="share-link-box" onclick="copyShareLink()"></div>
+      <br/>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-ghost flex-1" onclick="closeCreateParty()">إغلاق</button>
+        <button class="btn btn-primary flex-1" id="btn-open-party" onclick="openPartyAdmin()">🎮 دخول البارتي</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== PAGE: PARTY ROOM ====== -->
+<div id="page-party" class="hidden">
+
+  <!-- Join screen (for participants) -->
+  <div id="join-screen">
+    <div class="join-wrap">
+      <div class="join-header">
+        <span class="logo-tag">XDream Live</span>
+        <h2>انضم للبارتي!</h2>
+        <p>أدخل اسمك في اللعبة للمشاركة</p>
+      </div>
+      <div class="card">
+        <label for="inp-player-name">اسمك في اللعبة</label>
+        <input type="text" id="inp-player-name" class="input-field" placeholder="اكتب اسمك هنا..." maxlength="30" />
+        <br/><br/>
+        <button class="btn btn-accent w-full btn-lg" onclick="joinParty()">
+          🎮 انضم الآن
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Room screen (after joining) -->
+  <div id="room-screen" class="hidden">
+
+    <!-- CHAT SIDEBAR (right because RTL) -->
+    <div class="chat-sidebar">
+      <div class="chat-header">
+        <div class="pulse-dot"></div>
+        <h3>الشات المباشر 💬</h3>
+      </div>
+      <div class="chat-messages" id="chat-messages-list"></div>
+      <div class="chat-input-area">
+        <input type="text" id="chat-inp" placeholder="اكتب رسالة..." maxlength="120"
+          onkeydown="if(event.key==='Enter')sendChatMsg()" />
+        <button class="send-btn" onclick="sendChatMsg()">➤</button>
+      </div>
+    </div>
+
+    <!-- MAIN AREA -->
+    <div class="room-main">
+      <div class="room-header">
+        <div class="left">
+          <div>
+            <div class="room-title-tag">XDREAM LIVE</div>
+            <h2>🎉 البارتي</h2>
+          </div>
+          <div class="player-count-badge">
+            <span>👥</span>
+            <span id="participant-count">0</span>
+            <span>لاعب</span>
+          </div>
+        </div>
+        <div id="admin-controls" class="hidden">
+          <button class="btn btn-gold" onclick="startDraw()" id="btn-draw">
+            🎰 سحب الفائزين
+          </button>
+          <button class="btn btn-danger btn-sm" onclick="closePartyRoom()">
+            ✕ إنهاء البارتي
+          </button>
+        </div>
+      </div>
+
+      <!-- Draw result banner -->
+      <div id="draw-banner" class="hidden"></div>
+
+      <!-- Participants -->
+      <div class="participants-section">
+        <div class="section-label">المشاركون</div>
+        <div class="participants-grid" id="participants-list">
+          <div class="empty-state" style="padding:24px;">
+            <div class="icon">⏳</div>
+            <p>في انتظار اللاعبين...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  ⚙️  CONFIGURATION — عدّل هنا بياناتك من Supabase
+// ============================================================
+const SUPABASE_URL      = 'YOUR_SUPABASE_URL';      // مثال: https://xxxx.supabase.co
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'; // مفتاح anon public
+
+const PASSWORD = 'KFPAOEKESPOIJFKOIEJPAkADOW';
+// ============================================================
+
+// Init Supabase
+let supabase = null;
+let configValid = false;
+
+try {
+  if (SUPABASE_URL !== 'YOUR_SUPABASE_URL') {
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    configValid = true;
+  }
+} catch(e) {
+  console.warn('Supabase init error:', e);
+}
+
+// State
+let currentPartyId   = null;
+let currentPartyData = null;
+let currentPlayer    = null;
+let isAdmin          = false;
+let realtimeSubs     = [];
+let newPartyId       = null; // temp for modal step 3
+
+// ============================================================
+//  HELPERS
+// ============================================================
+function toast(msg, type='info') {
+  const c = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  c.appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
+
+function show(id) { document.getElementById(id)?.classList.remove('hidden'); }
+function hide(id) { document.getElementById(id)?.classList.add('hidden'); }
+function showPage(page) {
+  ['page-login','page-dashboard','page-party'].forEach(p => hide(p));
+  show(page);
+}
+
+function randomAvatar(name) {
+  return name ? name.charAt(0).toUpperCase() : '?';
+}
+
+function getCurrentURL() {
+  return window.location.origin + window.location.pathname;
+}
+
+// ============================================================
+//  LOGIN
+// ============================================================
+document.getElementById('pw-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+function doLogin() {
+  const pw = document.getElementById('pw-input').value.trim();
+  if (pw === PASSWORD) {
+    hide('login-error');
+    localStorage.setItem('xd_auth', '1');
+    enterDashboard();
+  } else {
+    show('login-error');
+    document.getElementById('pw-input').value = '';
+  }
+}
+
+function logout() {
+  localStorage.removeItem('xd_auth');
+  unsubscribeAll();
+  showPage('page-login');
+}
+
+// ============================================================
+//  DASHBOARD
+// ============================================================
+async function enterDashboard() {
+  showPage('page-dashboard');
+  if (!configValid) {
+    show('config-warning');
+    return;
+  }
+  await loadParties();
+}
+
+async function loadParties() {
+  if (!configValid) return;
+  try {
+    const { data, error } = await supabase
+      .from('parties')
+      .select('*, participants(count)')
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (error) throw error;
+    renderPartiesList(data || []);
+  } catch(e) {
+    console.error(e);
+    toast('خطأ في تحميل البارتيات', 'error');
+  }
+}
+
+function renderPartiesList(parties) {
+  const el = document.getElementById('parties-list');
+  if (!parties.length) {
+    el.innerHTML = `<div class="empty-state"><div class="icon">🎮</div><p>لا توجد بارتيات بعد<br/>اضغط "إنشاء بارتي" للبدء</p></div>`;
+    return;
+  }
+  el.innerHTML = parties.map(p => `
+    <div class="party-card animate-in" onclick="enterPartyAdmin('${p.id}')">
+      <div class="party-id">PARTY #${p.id.slice(0,8).toUpperCase()}</div>
+      <div class="party-code-preview">🎁 ${p.reveal_code || '—'}</div>
+      <div class="party-meta">
+        <span>🏆 ${p.winners_count} فائز</span>
+        <span>📅 ${new Date(p.created_at).toLocaleTimeString('ar')}</span>
+      </div>
+      <div class="party-actions">
+        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();enterPartyAdmin('${p.id}')">🎮 دخول</button>
+        <button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();copyLink('${p.id}')">🔗 نسخ الرابط</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function copyLink(partyId) {
+  const link = `${getCurrentURL()}?party=${partyId}`;
+  navigator.clipboard.writeText(link).then(() => toast('✅ تم نسخ الرابط', 'success'));
+}
+
+// ============================================================
+//  CREATE PARTY MODAL
+// ============================================================
+function openCreateParty() {
+  show('modal-create');
+  resetCreateModal();
+}
+function closeCreateParty() {
+  hide('modal-create');
+  resetCreateModal();
+}
+function resetCreateModal() {
+  ['create-step-2','create-step-3'].forEach(hide);
+  show('create-step-1');
+  ['step-dot-1'].forEach(id => { document.getElementById(id).className='step-dot active'; });
+  ['step-dot-2','step-dot-3'].forEach(id => { document.getElementById(id).className='step-dot'; });
+  ['step-line-1','step-line-2'].forEach(id => { document.getElementById(id).className='step-line'; });
+  document.getElementById('inp-reveal-code').value = '';
+  document.getElementById('inp-winners-count').value = '1';
+  newPartyId = null;
+}
+
+function setStep(n) {
+  [1,2,3].forEach(i => {
+    const dot = document.getElementById(`step-dot-${i}`);
+    if (i < n)       dot.className = 'step-dot done';
+    else if (i === n) dot.className = 'step-dot active';
+    else              dot.className = 'step-dot';
+    if (i < 3) {
+      const line = document.getElementById(`step-line-${i}`);
+      line.className = i < n ? 'step-line done' : 'step-line';
+    }
+    hide(`create-step-${i}`);
+  });
+  show(`create-step-${n}`);
+}
+
+function createStep1Next() {
+  const code    = document.getElementById('inp-reveal-code').value.trim();
+  const winners = parseInt(document.getElementById('inp-winners-count').value);
+  if (!code) { toast('⚠️ أدخل كود الجائزة', 'error'); return; }
+  if (!winners || winners < 1) { toast('⚠️ عدد الفائزين يجب أن يكون 1 على الأقل', 'error'); return; }
+  document.getElementById('confirm-code').textContent    = code;
+  document.getElementById('confirm-winners').textContent = `${winners} لاعب`;
+  setStep(2);
+}
+function createGoBack() { setStep(1); }
+
+async function doCreateParty() {
+  if (!configValid) { toast('⚠️ Supabase غير مُعدّ', 'error'); return; }
+  const btn = document.getElementById('btn-create-confirm');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> جاري الإنشاء...';
+
+  const code    = document.getElementById('inp-reveal-code').value.trim();
+  const winners = parseInt(document.getElementById('inp-winners-count').value);
+
+  try {
+    const { data, error } = await supabase
+      .from('parties')
+      .insert({ reveal_code: code, winners_count: winners })
+      .select().single();
+
+    if (error) throw error;
+    newPartyId = data.id;
+    const link = `${getCurrentURL()}?party=${data.id}`;
+    document.getElementById('share-link-box').textContent = link;
+    setStep(3);
+    toast('🎉 تم إنشاء البارتي!', 'success');
+    loadParties();
+  } catch(e) {
+    console.error(e);
+    toast('❌ فشل في إنشاء البارتي: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '✨ إنشاء البارتي';
+  }
+}
+
+function copyShareLink() {
+  const txt = document.getElementById('share-link-box').textContent;
+  navigator.clipboard.writeText(txt).then(() => toast('✅ تم نسخ الرابط', 'success'));
+}
+
+function openPartyAdmin() {
+  closeCreateParty();
+  if (newPartyId) enterPartyAdmin(newPartyId);
+}
+
+// ============================================================
+//  PARTY ROOM — ADMIN ENTRY
+// ============================================================
+async function enterPartyAdmin(partyId) {
+  if (!configValid) return;
+  isAdmin = true;
+  currentPlayer = 'المشرف';
+  await loadAndEnterParty(partyId);
+  show('admin-controls');
+}
+
+// ============================================================
+//  PARTY ROOM — PARTICIPANT ENTRY (via URL param)
+// ============================================================
+async function checkPartyURL() {
+  const params = new URLSearchParams(window.location.search);
+  const partyId = params.get('party');
+  if (!partyId) return false;
+
+  // Show party join screen (not dashboard)
+  showPage('page-party');
+  show('join-screen');
+  hide('room-screen');
+  currentPartyId = partyId;
+
+  // Prefetch party
+  if (configValid) {
+    try {
+      const { data } = await supabase.from('parties').select('*').eq('id', partyId).single();
+      currentPartyData = data;
+    } catch(e) { console.error(e); }
+  }
+  return true;
+}
+
+async function joinParty() {
+  const name = document.getElementById('inp-player-name').value.trim();
+  if (!name) { toast('⚠️ أدخل اسمك في اللعبة', 'error'); return; }
+  if (!configValid) { toast('⚠️ Supabase غير مُعدّ', 'error'); return; }
+  if (!currentPartyId) { toast('❌ رابط البارتي غير صحيح', 'error'); return; }
+
+  try {
+    // Prevent duplicate names in same party
+    const { data: existing } = await supabase
+      .from('participants')
+      .select('id')
+      .eq('party_id', currentPartyId)
+      .eq('player_name', name)
+      .single();
+
+    if (existing) {
+      toast('⚠️ هذا الاسم مسجل مسبقاً', 'error');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('participants')
+      .insert({ party_id: currentPartyId, player_name: name, is_winner: false });
+
+    if (error) throw error;
+
+    currentPlayer = name;
+    localStorage.setItem('xd_player_' + currentPartyId, name);
+
+    // System message
+    await supabase.from('messages').insert({
+      party_id: currentPartyId,
+      player_name: '__system__',
+      message: `🎮 ${name} انضم إلى البارتي!`
+    });
+
+    hide('join-screen');
+    show('room-screen');
+    isAdmin = false;
+    hide('admin-controls');
+    await loadRoomData();
+    subscribeRealtime();
+    toast(`مرحباً ${name}! 🎉`, 'success');
+  } catch(e) {
+    console.error(e);
+    toast('❌ خطأ في الانضمام: ' + e.message, 'error');
+  }
+}
+
+// ============================================================
+//  LOAD & ENTER PARTY (admin)
+// ============================================================
+async function loadAndEnterParty(partyId) {
+  currentPartyId = partyId;
+  showPage('page-party');
+  hide('join-screen');
+  show('room-screen');
+  if (isAdmin) show('admin-controls');
+  await loadRoomData();
+  subscribeRealtime();
+}
+
+async function loadRoomData() {
+  if (!configValid || !currentPartyId) return;
+  try {
+    // Load party info
+    const { data: party } = await supabase
+      .from('parties')
+      .select('*')
+      .eq('id', currentPartyId)
+      .single();
+    currentPartyData = party;
+
+    // Load participants
+    const { data: parts } = await supabase
+      .from('participants')
+      .select('*')
+      .eq('party_id', currentPartyId)
+      .order('joined_at', { ascending: true });
+    renderParticipants(parts || []);
+
+    // Load messages
+    const { data: msgs } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('party_id', currentPartyId)
+      .order('created_at', { ascending: true })
+      .limit(80);
+    const chatEl = document.getElementById('chat-messages-list');
+    chatEl.innerHTML = '';
+    (msgs || []).forEach(m => appendChatMsg(m));
+
+    // Check if draw already done
+    if (party && parts) {
+      const hasWinner = parts.some(p => p.is_winner);
+      if (hasWinner) showDrawResult(parts);
+    }
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+// ============================================================
+//  RENDER PARTICIPANTS
+// ============================================================
+function renderParticipants(parts) {
+  const el    = document.getElementById('participants-list');
+  const count = document.getElementById('participant-count');
+  count.textContent = parts.length;
+
+  if (!parts.length) {
+    el.innerHTML = `<div class="empty-state" style="padding:24px;"><div class="icon">⏳</div><p>في انتظار اللاعبين...</p></div>`;
+    return;
+  }
+  el.innerHTML = parts.map(p => `
+    <div class="participant-chip ${p.is_winner ? 'is-winner' : ''}" id="chip-${p.id}">
+      <div class="avatar">${randomAvatar(p.player_name)}</div>
+      <span>${escHtml(p.player_name)}</span>
+      ${p.is_winner ? '<span>🏆</span>' : ''}
+    </div>
+  `).join('');
+}
+
+function escHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+// ============================================================
+//  CHAT
+// ============================================================
+function appendChatMsg(msg) {
+  const el = document.getElementById('chat-messages-list');
+  const div = document.createElement('div');
+  if (msg.player_name === '__system__') {
+    div.className = 'chat-msg system-msg';
+    div.textContent = msg.message;
+  } else {
+    div.className = 'chat-msg';
+    div.innerHTML = `<div class="msg-name">${escHtml(msg.player_name)}</div><div class="msg-text">${escHtml(msg.message)}</div>`;
+  }
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
+async function sendChatMsg() {
+  const inp = document.getElementById('chat-inp');
+  const msg = inp.value.trim();
+  if (!msg || !currentPlayer || !currentPartyId) return;
+  if (msg.length > 120) { toast('⚠️ الرسالة طويلة جداً', 'error'); return; }
+
+  inp.value = '';
+  try {
+    await supabase.from('messages').insert({
+      party_id: currentPartyId,
+      player_name: currentPlayer,
+      message: msg
+    });
+  } catch(e) {
+    console.error(e);
+    toast('❌ فشل إرسال الرسالة', 'error');
+  }
+}
+
+// ============================================================
+//  DRAW
+// ============================================================
+async function startDraw() {
+  if (!configValid || !currentPartyId) return;
+  if (!currentPartyData) { toast('❌ بيانات البارتي غير متوفرة', 'error'); return; }
+
+  const btn = document.getElementById('btn-draw');
+  btn.disabled = true;
+
+  // Show draw animation
+  const banner = document.getElementById('draw-banner');
+  banner.className = '';
+  banner.innerHTML = `
+    <div class="draw-animation">
+      <div class="spinning-wheel"></div>
+      <div style="font-size:18px;font-weight:700;">جاري السحب... 🎰</div>
+    </div>`;
+  show('draw-banner');
+
+  await sleep(1800);
+
+  try {
+    const { data: parts } = await supabase
+      .from('participants')
+      .select('*')
+      .eq('party_id', currentPartyId);
+
+    if (!parts || !parts.length) {
+      toast('⚠️ لا يوجد مشاركون', 'error');
+      hide('draw-banner');
+      btn.disabled = false;
+      return;
+    }
+
+    const winnersCount = Math.min(currentPartyData.winners_count, parts.length);
+    const shuffled = [...parts].sort(() => Math.random() - 0.5);
+    const winners  = shuffled.slice(0, winnersCount);
+
+    // Mark winners in DB
+    for (const w of winners) {
+      await supabase.from('participants').update({ is_winner: true }).eq('id', w.id);
+    }
+
+    // System message
+    const names = winners.map(w => w.player_name).join('، ');
+    await supabase.from('messages').insert({
+      party_id: currentPartyId,
+      player_name: '__system__',
+      message: `🏆 نتائج السحب: الفائزون هم ${names}`
+    });
+
+    toast('🏆 تم السحب!', 'success');
+    btn.innerHTML = '✅ تم السحب';
+  } catch(e) {
+    console.error(e);
+    toast('❌ خطأ في السحب: ' + e.message, 'error');
+    btn.disabled = false;
+    hide('draw-banner');
+  }
+}
+
+function showDrawResult(parts) {
+  const banner = document.getElementById('draw-banner');
+  const winners = parts.filter(p => p.is_winner);
+  if (!winners.length) return;
+
+  const isCurrentWinner = currentPlayer && winners.some(w => w.player_name === currentPlayer);
+
+  if (isAdmin || isCurrentWinner) {
+    // Show code
+    banner.className = 'winner-banner';
+    banner.innerHTML = `
+      <div style="font-size:28px;margin-bottom:8px;">🏆</div>
+      <h3 style="color:var(--success);">
+        ${isCurrentWinner && !isAdmin ? `مبروك ${escHtml(currentPlayer)}! أنت فائز! 🎉` : `نتائج السحب — ${winners.length} فائز`}
+      </h3>
+      <p style="font-size:14px;color:var(--text-dim);margin:8px 0;">كود جائزتك:</p>
+      <div class="code-reveal">${escHtml(currentPartyData?.reveal_code || '')}</div>
+      <p style="font-size:13px;color:var(--text-muted);margin-top:10px;">
+        الفائزون: ${winners.map(w=>escHtml(w.player_name)).join(' / ')}
+      </p>`;
+  } else {
+    // Not a winner
+    banner.className = '';
+    banner.innerHTML = `
+      <div style="font-size:28px;margin-bottom:8px;">🎲</div>
+      <h3>انتهى السحب</h3>
+      <p style="font-size:14px;color:var(--text-muted);margin-top:6px;">
+        الفائزون: ${winners.map(w=>escHtml(w.player_name)).join(' / ')}
+      </p>`;
+  }
+  show('draw-banner');
+}
+
+// ============================================================
+//  REALTIME SUBSCRIPTIONS
+// ============================================================
+function subscribeRealtime() {
+  if (!configValid || !currentPartyId) return;
+  unsubscribeAll();
+
+  // Participants channel
+  const partSub = supabase
+    .channel(`party-parts-${currentPartyId}`)
+    .on('postgres_changes', {
+      event: '*', schema: 'public', table: 'participants',
+      filter: `party_id=eq.${currentPartyId}`
+    }, async () => {
+      const { data } = await supabase
+        .from('participants')
+        .select('*')
+        .eq('party_id', currentPartyId)
+        .order('joined_at', { ascending: true });
+      renderParticipants(data || []);
+      const hasWinner = (data || []).some(p => p.is_winner);
+      if (hasWinner) {
+        const { data: party } = await supabase.from('parties').select('*').eq('id', currentPartyId).single();
+        currentPartyData = party;
+        showDrawResult(data);
+      }
+    })
+    .subscribe();
+
+  // Messages channel
+  const msgSub = supabase
+    .channel(`party-msgs-${currentPartyId}`)
+    .on('postgres_changes', {
+      event: 'INSERT', schema: 'public', table: 'messages',
+      filter: `party_id=eq.${currentPartyId}`
+    }, (payload) => {
+      appendChatMsg(payload.new);
+    })
+    .subscribe();
+
+  realtimeSubs.push(partSub, msgSub);
+}
+
+function unsubscribeAll() {
+  realtimeSubs.forEach(s => { try { supabase?.removeChannel(s); } catch(e){} });
+  realtimeSubs = [];
+}
+
+function closePartyRoom() {
+  unsubscribeAll();
+  currentPartyId = currentPartyData = currentPlayer = null;
+  isAdmin = false;
+  enterDashboard();
+}
+
+// ============================================================
+//  UTILITIES
+// ============================================================
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ============================================================
+//  BOOT
+// ============================================================
+async function boot() {
+  // Check if URL has party param (participant flow)
+  const isParty = await checkPartyURL();
+  if (isParty) return;
+
+  // Check admin auth
+  if (localStorage.getItem('xd_auth') === '1') {
+    enterDashboard();
+  } else {
+    showPage('page-login');
+  }
+}
+
+boot();
+</script>
+</body>
+</html>
