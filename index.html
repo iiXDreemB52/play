@@ -999,30 +999,33 @@ function logout() {
 //  DASHBOARD
 // ============================================================
 async function enterDashboard() {
+  isAdmin = true;
   showPage('page-dashboard');
   if (!configValid) {
     show('config-warning');
-    return;
   }
-  await loadParties();
+  fetchParties();
+
+  const channel = supabase
+    .channel('public:parties')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'parties' }, () => {
+      fetchParties();
+    })
+    .subscribe();
+  realtimeSubs.push(channel);
 }
 
-async function loadParties() {
+async function fetchParties() {
   if (!configValid) return;
-  try {
-    const { data, error } = await supabase
-      .from('parties')
-      .select('*, participants(count)')
-      .order('created_at', { ascending: false })
-      .limit(20);
-
-    if (error) throw error;
-    renderPartiesList(data || []);
-  } catch(e) {
-    console.error(e);
-    toast('خطأ في تحميل البارتيات', 'error');
-  }
+  const { data, error } = await supabase
+    .from('parties')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) { console.error('Error fetching parties:', error); return; }
+  renderPartiesList(data || []);
 }
+
+async function loadParties() { await fetchParties(); }
 
 function renderPartiesList(parties) {
   const el = document.getElementById('parties-list');
@@ -1498,20 +1501,28 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 // ============================================================
 //  BOOT
 // ============================================================
-async function boot() {
-  // Check if URL has party param (participant flow)
-  const isParty = await checkPartyURL();
-  if (isParty) return;
+window.onload = async () => {
+  const auth = localStorage.getItem('xd_auth');
+  const urlParams = new URLSearchParams(window.location.search);
+  const partyId = urlParams.get('party');
 
-  // Check admin auth
-  if (localStorage.getItem('xd_auth') === '1') {
+  if (partyId) {
+    currentPartyId = partyId;
+    showPage('page-party');
+    show('join-screen');
+    hide('room-screen');
+    if (configValid) {
+      try {
+        const { data } = await supabase.from('parties').select('*').eq('id', partyId).single();
+        currentPartyData = data;
+      } catch(e) { console.error(e); }
+    }
+  } else if (auth === '1') {
     enterDashboard();
   } else {
     showPage('page-login');
   }
-}
-
-boot();
+};
 </script>
 </body>
 </html>
