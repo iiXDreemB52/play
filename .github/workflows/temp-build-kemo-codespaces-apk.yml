@@ -7,6 +7,12 @@ on:
     paths:
       - 'android-builder/KemoCodespaces/**'
       - '.github/workflows/temp-build-kemo-codespaces-apk.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'android-builder/KemoCodespaces/**'
+      - '.github/workflows/temp-build-kemo-codespaces-apk.yml'
 
 permissions:
   contents: read
